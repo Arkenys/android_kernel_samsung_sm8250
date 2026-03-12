@@ -614,27 +614,22 @@ ssize_t sec_bat_show_attrs(struct device *dev,
 	}
 		break;
 	case FG_ASOC:
-		value.intval = -1;
 		{
-			struct power_supply *psy_fg = NULL;
-			psy_fg = get_power_supply_by_name(battery->pdata->fuelgauge_name);
-			if (!psy_fg) {
-				pr_err("%s: Fail to get psy (%s)\n",
-						__func__, battery->pdata->fuelgauge_name);
-			} else {
-				if (psy_fg->desc->get_property != NULL) {
-					ret = psy_fg->desc->get_property(psy_fg,
-							POWER_SUPPLY_PROP_ENERGY_FULL, &value);
-					if (ret < 0) {
-						pr_err("%s: Fail to %s get (%d=>%d)\n",
-								__func__, battery->pdata->fuelgauge_name,
-								POWER_SUPPLY_PROP_ENERGY_FULL, ret);
-					}
-				}
+			union power_supply_propval full_val = {0, };
+			union power_supply_propval design_val = {0, };
+			int asoc = battery->batt_asoc;
+			if (asoc <= 0 || asoc >= 100) {
+				psy_do_property(battery->pdata->fuelgauge_name, get,
+						POWER_SUPPLY_PROP_CHARGE_FULL, full_val);
+				psy_do_property(battery->pdata->fuelgauge_name, get,
+						POWER_SUPPLY_PROP_CHARGE_FULL_DESIGN, design_val);
+				if (full_val.intval > 0 && design_val.intval > 0)
+					asoc = (full_val.intval * 100) / design_val.intval;
+				else
+					asoc = 100;
 			}
+			i += scnprintf(buf + i, PAGE_SIZE - i, "%d\n", asoc);
 		}
-		i += scnprintf(buf + i, PAGE_SIZE - i, "%d\n",
-			       value.intval);
 		break;
 	case AUTH:
 		break;

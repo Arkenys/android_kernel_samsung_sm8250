@@ -64,6 +64,9 @@ static enum power_supply_property sec_battery_props[] = {
 	POWER_SUPPLY_PROP_CHARGE_OTG_CONTROL,
 	POWER_SUPPLY_PROP_CHARGE_UNO_CONTROL,
 	POWER_SUPPLY_PROP_CHARGE_COUNTER,
+	POWER_SUPPLY_PROP_CYCLE_COUNT,
+	POWER_SUPPLY_PROP_CAPACITY_LEVEL,
+	
 };
 
 static enum power_supply_property sec_power_props[] = {
@@ -7524,6 +7527,40 @@ static int sec_bat_get_property(struct power_supply *psy,
 #endif
 		}
 		break;
+	case POWER_SUPPLY_PROP_CYCLE_COUNT:
+		value.intval = 0;
+		psy_do_property(battery->pdata->fuelgauge_name, get,
+				POWER_SUPPLY_PROP_CYCLE_COUNT, value);
+		if (value.intval <= 0 && battery->batt_cycle >= 0)
+			val->intval = battery->batt_cycle;
+		else
+			val->intval = value.intval;
+		break;
+	case POWER_SUPPLY_PROP_CAPACITY_LEVEL:
+		if (battery->status == POWER_SUPPLY_STATUS_FULL)
+			val->intval = POWER_SUPPLY_CAPACITY_LEVEL_FULL;
+		else if (battery->capacity <= 5)
+			val->intval = POWER_SUPPLY_CAPACITY_LEVEL_CRITICAL;
+		else if (battery->capacity <= 15)
+			val->intval = POWER_SUPPLY_CAPACITY_LEVEL_LOW;
+		else
+			val->intval = POWER_SUPPLY_CAPACITY_LEVEL_NORMAL;
+		break;
+	case POWER_SUPPLY_PROP_STATE_OF_HEALTH: {
+		union power_supply_propval full_val, design_val;
+		/* Fetch the current full capacity and design capacity from the fuel gauge */
+		psy_do_property(battery->pdata->fuelgauge_name, get,
+				POWER_SUPPLY_PROP_CHARGE_FULL, full_val);
+		psy_do_property(battery->pdata->fuelgauge_name, get,
+				POWER_SUPPLY_PROP_CHARGE_FULL_DESIGN, design_val);
+		/* Calculate the percentage (e.g., (7025000 * 100) / 8000000 = 87) */
+		if (full_val.intval > 0 && design_val.intval > 0) {
+			val->intval = (full_val.intval * 100) / design_val.intval;
+		} else {
+			val->intval = 100;
+		}
+		break;
+	}
 	case POWER_SUPPLY_PROP_TEMP:
 		val->intval = battery->temperature;
 		break;

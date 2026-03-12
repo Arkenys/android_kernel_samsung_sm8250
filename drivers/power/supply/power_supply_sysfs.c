@@ -501,6 +501,7 @@ static struct device_attribute power_supply_attrs[] = {
 	POWER_SUPPLY_ATTR(cycle_counts),
 	POWER_SUPPLY_ATTR(afc_charger_mode),
 	POWER_SUPPLY_ATTR(serial_number),
+	POWER_SUPPLY_ATTR(state_of_health),
 };
 
 static struct attribute *
